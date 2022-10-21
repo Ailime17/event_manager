@@ -1,6 +1,8 @@
 require 'csv'
 require 'google/apis/civicinfo_v2'
 require 'erb'
+require 'time'
+require 'date'
 
 puts 'EventManager initialized.'
 
@@ -24,6 +26,18 @@ def clean_homephones(phone_number)
   else
     phone
   end
+end
+
+hours_hash = Hash.new(0)
+def eval_hours(date, hash)
+  the_date = Time.strptime("#{date}", "%m/%e/%y %k:%M")
+  hour = the_date.hour
+  if hash.key?(hour)
+    hash[hour] += 1
+  else
+    hash[hour] = 1
+  end
+  hour
 end
 
 def legislators_by_zipcode(zip)
@@ -59,9 +73,13 @@ contents.each do |row|
   zipcode = clean_zipcodes(row[:zipcode])
   homephone = clean_homephones(row[:homephone])
 
+  reg_hour = eval_hours(row[:regdate], hours_hash)
+
   legislators = legislators_by_zipcode(zipcode)
 
   personal_letter = erb_template.result(binding)
 
   save_thank_you_letter(id, personal_letter)
 end
+
+peak_reg_hours = hours_hash.select { |_key, value| value >= 3 }
