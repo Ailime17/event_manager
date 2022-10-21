@@ -40,6 +40,23 @@ def eval_hours(date, hash)
   hour
 end
 
+days_hash = Hash.new(0)
+def eval_days(date, hash)
+  date_array = Date.strptime("#{date}", "%m/%e/%y %k:%M").to_s.split(" ")
+  day = date_array[0]
+  day = Date.parse(day)
+
+  numeric_day = day.wday
+  english_day_name = day.strftime("%A")
+
+  if hash.key?("#{numeric_day}=(#{english_day_name})")
+    hash["#{numeric_day}=(#{english_day_name})"] += 1
+  else
+    hash["#{numeric_day}=(#{english_day_name})"] = 1
+  end
+  numeric_day
+end
+
 def legislators_by_zipcode(zip)
   civic_info = Google::Apis::CivicinfoV2::CivicInfoService.new
   civic_info.key = 'AIzaSyClRzDqDh5MsXwnCWi0kOiiBivP6JsSyBw'
@@ -75,6 +92,8 @@ contents.each do |row|
 
   reg_hour = eval_hours(row[:regdate], hours_hash)
 
+  reg_day = eval_days(row[:regdate], days_hash)
+
   legislators = legislators_by_zipcode(zipcode)
 
   personal_letter = erb_template.result(binding)
@@ -82,4 +101,20 @@ contents.each do |row|
   save_thank_you_letter(id, personal_letter)
 end
 
-peak_reg_hours = hours_hash.select { |_key, value| value >= 3 }
+def find_highest_val(hash)
+  highest_val_hash = Hash.new(0)
+  highest_val_nr = 0
+  hash.each do |key, num|
+    if num > highest_val_nr
+      highest_val_nr = num
+      highest_val_hash = Hash.new(0)
+      highest_val_hash[key] = num
+    end
+  end
+  hash.each do |key, num|
+   highest_val_hash[key] = num if (highest_val_hash.value?(num) && !(highest_val_hash.key?(key)))
+  end
+  highest_val_hash
+end
+peak_reg_day = find_highest_val(days_hash)
+peak_reg_hours = find_highest_val(hours_hash)
